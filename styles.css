@@ -1,0 +1,247 @@
+
+    /* Estilo geral e cores */
+    .stApp {
+        background-color: #141E33;
+        color: white;
+    }
+    
+    .main-header {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: white;
+        padding: 10px 0;
+    }
+    
+    .section-header {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: white;
+        padding: 5px 0;
+    }
+    
+    /* Estilos para painéis laterais e cards */
+    .side-card {
+        background-color: #1B2640;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    /* Estilos para status */
+    .status-disponivel {
+        display: inline-block;
+        background-color: #4CAF50;
+        color: white;
+        font-weight: bold;
+        padding: 5px 15px;
+        border-radius: 20px;
+        text-align: center;
+        min-width: 120px;
+    }
+    
+    .status-indisponivel {
+        display: inline-block;
+        background-color: #FF3B3B;
+        color: white;
+        font-weight: bold;
+        padding: 5px 15px;
+        border-radius: 20px;
+        text-align: center;
+        min-width: 120px;
+    }
+    
+    /* Tabela de dados */
+    .dataframe {
+        width: 100%;
+        background-color: #1B2640;
+        color: white;
+        border-collapse: collapse;
+    }
+    
+    .dataframe th {
+        background-color: #141E33;
+        color: #8B93A7;
+        text-align: left;
+        padding: 12px;
+    }
+    
+    .dataframe td {
+        padding: 10px;
+        border-bottom: 1px solid #2D3958;
+    }
+    
+    /* Botões */
+    .primary-button {
+        background-color: #1B2640;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .action-button {
+        background-color: #6B50A3;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        min-width: 100px;
+        text-align: center;
+        display: inline-block;
+        margin: 2px;
+    }
+    
+    .update-button {
+        background-color: #1B2640;
+        color: white;
+        border: 1px solid #2D3958;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-align: center;
+        font-weight: bold;
+        width: 100%;
+    }
+    
+    .update-button:hover {
+        background-color: #2D3958;
+    }
+    
+    /* Progress bar personalizada */
+    .progress-container {
+        width: 100%;
+        background-color: #2D3958;
+        border-radius: 5px;
+        margin: 5px 0;
+    }
+    
+    .progress-disponivel {
+        background-color: #4CAF50;
+        height: 8px;
+        border-radius: 5px;
+    }
+    
+    .progress-indisponivel {
+        background-color: #9A3B95;
+        height: 8px;
+        border-radius: 5px;
+    }
+    
+    /* Campos de busca */
+    .stTextInput > div > div > input {
+        background-color: #1B2640;
+        color: white;
+        border: 1px solid #2D3958;
+        border-radius: 5px;
+    }
+    
+    /* Estilo para seletores */
+    .stSelectbox > div > div > div {
+        background-color: #1B2640;
+        color: white;
+        border: 1px solid #2D3958;
+    }
+    
+    .stSelectbox > div > div > div > div {
+        background-color: #1B2640;
+        color: white;
+    }
+    
+    /* Barra superior */
+    .topnav {
+        background-color: #141E33;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 20px;
+        border-bottom: 1px solid #2D3958;
+    }
+    
+    .logo {
+        display: flex;
+        align-items: center;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    
+    .logo-circle {
+        width: 30px;
+        height: 30px;
+        background-color: #9A3B95;
+        border-radius: 50%;
+        margin-right: 10px;
+    }
+    
+    .topnav-links {
+        display: flex;
+    }
+    
+    .topnav-link {
+        color: white;
+        margin-left: 20px;
+        text-decoration: none;
+        padding: 5px 10px;
+    }
+    
+    /* Última atualização */
+    .last-update {
+        background-color: #1B2640;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 5px;
+        font-size: 0.9rem;
+    }
+    
+    /* Estilos para os botões do Streamlit */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        border-radius: 5px;
+        background-color: #1B2640;
+        color: white;
+        border: 1px solid #2D3958;
+        font-weight: bold;
+        padding: 10px;
+    }
+    
+    /* Ocultar estilo padrão de botão do Streamlit */
+    div.stButton > button {
+        width: 100%;
+        border-radius: 5px;
+        background-color: #1B2640;
+        color: white;
+        border: 1px solid #2D3958;
+        font-weight: bold;
+    }
+    
+    div.stButton > button[data-baseweb="button"] {
+        width: 100%;
+        background-color: #1B2640 !important;
+        color: white !important;
+        border: 1px solid #2D3958 !important;
+    }
+    
+    /* Atualizar button */
+    div.stButton > button[data-baseweb="button"].css-1cpxqw2 {
+        background-color: #1B2640 !important;
+        color: white !important;
+        border: 1px solid #2D3958 !important;
+        margin-top: 15px;
+    }
+    
+    /* Destacar botão selecionado */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"].selected-disponivel {
+        background-color: #4CAF50 !important;
+        color: white !important;
+        border: none !important;
+    }
+    
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"].selected-indisponivel {
+        background-color: #FF3B3B !important;
+        color: white !important;
+        border: none !important;
+    }
+    
