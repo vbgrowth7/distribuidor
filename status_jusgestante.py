@@ -11,25 +11,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Implementar cache para melhorar o desempenho
-@st.cache_data(ttl=300)  # Cache por 5 minutos
-def carregar_dados_jusgestante():
-    """Carrega dados da tabela FILA_VENDEDORES_JUSGESTANTE com cache"""
-    query = "SELECT * FROM FILA_VENDEDORES_JUSGESTANTE"
-    return obter_dados(query)
-
-# Função para atualizar o status com invalidação de cache
-def atualizar_status(nome, novo_status):
-    """Atualiza o status de um registro na tabela FILA_VENDEDORES_JUSGESTANTE pelo nome"""
-    query = "UPDATE FILA_VENDEDORES_JUSGESTANTE SET Status = %s WHERE Name = %s"
-    sucesso, mensagem = executar_query(query, (novo_status, nome))
-    
-    # Invalidar o cache de dados quando houver atualização
-    if sucesso:
-        carregar_dados_jusgestante.clear()
-    
-    return sucesso, mensagem
-
 # Estilo personalizado para tema escuro e layout similar ao da imagem
 st.markdown("""
 <style>
@@ -230,64 +211,27 @@ st.markdown("""
         border-radius: 5px;
         font-size: 0.9rem;
     }
-    
-    /* Estilos para os botões do Streamlit */
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
-        border-radius: 5px;
-        background-color: #1B2640;
-        color: white;
-        border: 1px solid #2D3958;
-        font-weight: bold;
-        padding: 10px;
-    }
-    
-    /* Ocultar estilo padrão de botão do Streamlit */
-    div.stButton > button {
-        width: 100%;
-        border-radius: 5px;
-        background-color: #1B2640;
-        color: white;
-        border: 1px solid #2D3958;
-        font-weight: bold;
-    }
-    
-    div.stButton > button[data-baseweb="button"] {
-        width: 100%;
-        background-color: #1B2640 !important;
-        color: white !important;
-        border: 1px solid #2D3958 !important;
-    }
-    
-    /* Atualizar button */
-    div.stButton > button[data-baseweb="button"].css-1cpxqw2 {
-        background-color: #1B2640 !important;
-        color: white !important;
-        border: 1px solid #2D3958 !important;
-        margin-top: 15px;
-    }
-    
-    /* Destacar botão selecionado */
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"].selected-disponivel {
-        background-color: #4CAF50 !important;
-        color: white !important;
-        border: none !important;
-    }
-    
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"].selected-indisponivel {
-        background-color: #FF3B3B !important;
-        color: white !important;
-        border: none !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# Função auxiliar para formatar status
-def formatar_status_html(status):
-    status_str = str(status).upper()
-    if status_str in ["DISPONÍVEL", "DISPONIVEL"]:
-        return f'<div class="status-disponivel">DISPONÍVEL</div>'
-    else:
-        return f'<div class="status-indisponivel">INDISPONÍVEL</div>'
+# Implementar cache para melhorar o desempenho
+@st.cache_data(ttl=300)  # Cache por 5 minutos
+def carregar_dados_jusgestante():
+    """Carrega dados da tabela FILA_VENDEDORES_JUSGESTANTE com cache"""
+    query = "SELECT * FROM FILA_VENDEDORES_JUSGESTANTE"
+    return obter_dados(query)
+
+# Função para atualizar o status com invalidação de cache
+def atualizar_status(nome, novo_status):
+    """Atualiza o status de um registro na tabela FILA_VENDEDORES_JUSGESTANTE pelo nome"""
+    query = "UPDATE FILA_VENDEDORES_JUSGESTANTE SET Status = %s WHERE Name = %s"
+    sucesso, mensagem = executar_query(query, (novo_status, nome))
+    
+    # Invalidar o cache de dados quando houver atualização
+    if sucesso:
+        carregar_dados_jusgestante.clear()
+    
+    return sucesso, mensagem
 
 # Conectar ao banco de dados com cache
 @st.cache_resource(ttl=3600)  # Cache por 1 hora
@@ -299,12 +243,71 @@ def conectar_banco():
 
 # Inicialização do aplicativo - executado apenas uma vez
 if 'inicializado' not in st.session_state:
+    st.session_state.inicializado = True
+    st.session_state.atualizar_dados = True
+
+# Verifica a conexão com o banco
+with st.spinner("Conectando ao banco de dados..."):
     sucesso, mensagem = conectar_banco()
+    
     if not sucesso:
         st.error(f"Falha na conexão com o banco de dados: {mensagem}")
         st.stop()
-    st.session_state.inicializado = True
-    st.session_state.atualizar_dados = True
+
+# Carrega os dados
+with st.spinner("Carregando dados..."):
+    df = carregar_dados_jusgestante()
+    
+    if df.empty:
+        st.warning("Não foram encontrados registros na tabela FILA_VENDEDORES_JUSGESTANTE ou a tabela não existe.")
+        st.stop()
+
+# Otimizações adicionais para consultas SQL
+@st.cache_data(ttl=60)  # Cache por 1 minuto
+def contar_status():
+    """Obtém contagens de status diretamente via SQL para melhor desempenho"""
+    query_disponiveis = """
+    SELECT COUNT(DISTINCT Name) as count 
+    FROM FILA_VENDEDORES_JUSGESTANTE 
+    WHERE UPPER(Status) IN ('DISPONÍVEL', 'DISPONIVEL')
+    """
+    
+    query_indisponiveis = """
+    SELECT COUNT(DISTINCT Name) as count 
+    FROM FILA_VENDEDORES_JUSGESTANTE 
+    WHERE UPPER(Status) IN ('INDISPONÍVEL', 'INDISPONIVEL')
+    """
+    
+    query_total = """
+    SELECT COUNT(DISTINCT Name) as count 
+    FROM FILA_VENDEDORES_JUSGESTANTE
+    """
+    
+    disponiveis = obter_dados(query_disponiveis).iloc[0]['count'] if not obter_dados(query_disponiveis).empty else 0
+    indisponiveis = obter_dados(query_indisponiveis).iloc[0]['count'] if not obter_dados(query_indisponiveis).empty else 0
+    total = obter_dados(query_total).iloc[0]['count'] if not obter_dados(query_total).empty else 0
+    
+    return total, disponiveis, indisponiveis
+
+# Cálculos de estatísticas otimizados usando consulta SQL direta
+if 'status_counts' not in st.session_state or st.session_state.atualizar_dados:
+    total_agentes, disponiveis, indisponiveis = contar_status()
+    porcentagem_disponiveis = int((disponiveis / total_agentes) * 100) if total_agentes > 0 else 0
+    porcentagem_indisponiveis = int((indisponiveis / total_agentes) * 100) if total_agentes > 0 else 0
+    
+    st.session_state.status_counts = {
+        'total': total_agentes,
+        'disponiveis': disponiveis,
+        'indisponiveis': indisponiveis,
+        'porcentagem_disponiveis': porcentagem_disponiveis,
+        'porcentagem_indisponiveis': porcentagem_indisponiveis
+    }
+else:
+    total_agentes = st.session_state.status_counts['total']
+    disponiveis = st.session_state.status_counts['disponiveis']
+    indisponiveis = st.session_state.status_counts['indisponiveis']
+    porcentagem_disponiveis = st.session_state.status_counts['porcentagem_disponiveis']
+    porcentagem_indisponiveis = st.session_state.status_counts['porcentagem_indisponiveis']
 
 # Barra superior personalizada
 st.markdown("""
@@ -323,17 +326,6 @@ st.markdown("""
 # Layout principal com colunas
 col1, col2 = st.columns([1, 3])
 
-# Só carrega os dados quando necessário
-if 'dados_df' not in st.session_state or st.session_state.atualizar_dados:
-    with st.spinner("Carregando dados..."):
-        st.session_state.dados_df = carregar_dados_jusgestante()
-        st.session_state.atualizar_dados = False
-
-df = st.session_state.dados_df
-if df.empty:
-    st.warning("Não foram encontrados registros na tabela FILA_VENDEDORES_JUSGESTANTE.")
-    st.stop()
-
 # Coluna 1 (Painel lateral) - Agente, Total, Disponíveis, Indisponíveis
 with col1:
     # Card Agente
@@ -342,12 +334,11 @@ with col1:
     
     # Lista de nomes para selecionar
     names = df['Name'].unique().tolist()
-    # names.insert(0, "Selecione um agente") - Removendo opção default para simular a imagem de referência
     selected_name = st.selectbox("", names, label_visibility="collapsed")
 
     # Se um agente foi selecionado, mostra opções de status e botão atualizar
     if selected_name:
-        # Obter o status atual do agente selecionado - usando o DataFrame já em memória
+        # Obter o status atual do agente selecionado
         status_atual = df[df['Name'] == selected_name]['Status'].iloc[0].upper() if not df[df['Name'] == selected_name].empty else "INDISPONÍVEL"
         
         # STATUS
@@ -368,39 +359,7 @@ with col1:
         def selecionar_status(status):
             st.session_state.status_selecionado = status
         
-        # Estilo simplificado para os botões de status
-        st.markdown("""
-        <style>
-        /* Estilo para os botões de status */
-        div.status-area {
-            margin-bottom: 20px;
-        }
-        
-        div.status-button {
-            padding: 10px;
-            text-align: center;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            background-color: #1B2640;
-            color: white;
-            border: 1px solid #2D3958;
-            margin-bottom: 10px;
-        }
-        
-        div.status-badge {
-            display: inline-block;
-            background-color: #FF3B3B;
-            color: white;
-            font-weight: bold;
-            padding: 5px 15px;
-            border-radius: 15px;
-            margin-left: 5px;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        # Implementação com botões nativos do Streamlit separadamente
+        # Botões de status
         status_col1, status_col2 = st.columns(2)
         
         with status_col1:
@@ -412,66 +371,6 @@ with col1:
             indisp_btn = st.button("INDISPONÍVEL", key="indisponivel", 
                                  on_click=selecionar_status, 
                                  args=("INDISPONÍVEL",))
-        
-        # Aplicar estilos personalizados diretamente via CSS injetado
-        st.markdown("""
-        <style>
-        /* Estilizando os botões Streamlit com fundo escuro */
-        div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
-            background-color: #1B2640 !important;
-            color: white !important;
-            border: 1px solid #2D3958 !important;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-        
-        /* Destacar botão selecionado */
-        div[data-testid="stHorizontalBlock"] button[kind="secondary"].selected-disponivel {
-            background-color: #4CAF50 !important;
-            color: white !important;
-            border: none !important;
-        }
-        
-        div[data-testid="stHorizontalBlock"] button[kind="secondary"].selected-indisponivel {
-            background-color: #FF3B3B !important;
-            color: white !important;
-            border: none !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        # Aplicar estilo de botão selecionado via JavaScript
-        st.markdown(f"""
-        <script>
-            // Função para encontrar e estilizar botões após o DOM ser carregado
-            document.addEventListener('DOMContentLoaded', function() {{
-                // Pequeno atraso para garantir que o DOM foi renderizado
-                setTimeout(function() {{
-                    // Obter todos os botões
-                    var buttons = document.querySelectorAll('button[kind="secondary"]');
-                    
-                    // Aplicar estilos com base no status selecionado
-                    buttons.forEach(function(button) {{
-                        if (button.innerText === 'DISPONÍVEL') {{
-                            if ('{st.session_state.status_selecionado}' === 'DISPONÍVEL') {{
-                                button.classList.add('selected-disponivel');
-                            }} else {{
-                                button.classList.remove('selected-disponivel');
-                            }}
-                        }}
-                        
-                        if (button.innerText === 'INDISPONÍVEL') {{
-                            if ('{st.session_state.status_selecionado}' === 'INDISPONÍVEL') {{
-                                button.classList.add('selected-indisponivel');
-                            }} else {{
-                                button.classList.remove('selected-indisponivel');
-                            }}
-                        }}
-                    }});
-                }}, 200);
-            }});
-        </script>
-        """, unsafe_allow_html=True)
         
         # Status selecionado com badge
         status_color = "#4CAF50" if st.session_state.status_selecionado == "DISPONÍVEL" else "#FF3B3B"
@@ -488,61 +387,12 @@ with col1:
                 sucesso, mensagem = atualizar_status(selected_name, st.session_state.status_selecionado)
                 if sucesso:
                     st.success(f"Status de {selected_name} atualizado para {st.session_state.status_selecionado} com sucesso!")
-                    # Marcar que os dados precisam ser atualizados
                     st.session_state.atualizar_dados = True
-                    # Rerun otimizado para atualizar apenas o necessário
                     st.rerun()
                 else:
                     st.error(f"Erro ao atualizar status: {mensagem}")
     
     st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Otimizações adicionais para consultas SQL
-    @st.cache_data(ttl=60)  # Cache por 1 minuto
-    def contar_status():
-        """Obtém contagens de status diretamente via SQL para melhor desempenho"""
-        query_disponiveis = """
-        SELECT COUNT(DISTINCT Name) as count 
-        FROM FILA_VENDEDORES_JUSGESTANTE 
-        WHERE UPPER(Status) IN ('DISPONÍVEL', 'DISPONIVEL')
-        """
-        
-        query_indisponiveis = """
-        SELECT COUNT(DISTINCT Name) as count 
-        FROM FILA_VENDEDORES_JUSGESTANTE 
-        WHERE UPPER(Status) IN ('INDISPONÍVEL', 'INDISPONIVEL')
-        """
-        
-        query_total = """
-        SELECT COUNT(DISTINCT Name) as count 
-        FROM FILA_VENDEDORES_JUSGESTANTE
-        """
-        
-        disponiveis = obter_dados(query_disponiveis).iloc[0]['count'] if not obter_dados(query_disponiveis).empty else 0
-        indisponiveis = obter_dados(query_indisponiveis).iloc[0]['count'] if not obter_dados(query_indisponiveis).empty else 0
-        total = obter_dados(query_total).iloc[0]['count'] if not obter_dados(query_total).empty else 0
-        
-        return total, disponiveis, indisponiveis
-
-    # Cálculos de estatísticas otimizados usando consulta SQL direta
-    if 'status_counts' not in st.session_state or st.session_state.atualizar_dados:
-        total_agentes, disponiveis, indisponiveis = contar_status()
-        porcentagem_disponiveis = int((disponiveis / total_agentes) * 100) if total_agentes > 0 else 0
-        porcentagem_indisponiveis = int((indisponiveis / total_agentes) * 100) if total_agentes > 0 else 0
-        
-        st.session_state.status_counts = {
-            'total': total_agentes,
-            'disponiveis': disponiveis,
-            'indisponiveis': indisponiveis,
-            'porcentagem_disponiveis': porcentagem_disponiveis,
-            'porcentagem_indisponiveis': porcentagem_indisponiveis
-        }
-    else:
-        total_agentes = st.session_state.status_counts['total']
-        disponiveis = st.session_state.status_counts['disponiveis']
-        indisponiveis = st.session_state.status_counts['indisponiveis']
-        porcentagem_disponiveis = st.session_state.status_counts['porcentagem_disponiveis']
-        porcentagem_indisponiveis = st.session_state.status_counts['porcentagem_indisponiveis']
     
     # Card Total de Agentes
     st.markdown('<div class="side-card">', unsafe_allow_html=True)
@@ -590,6 +440,18 @@ with col2:
         # Formatação da data atual no estilo DD/MM/YYYY HH:MM:SS
         data_atual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         st.markdown(f'<div class="last-update">Última atualização: {data_atual}</div>', unsafe_allow_html=True)
+        
+        # Botão de atualização do dashboard
+        if st.button("🔄 Atualizar Dashboard"):
+            carregar_dados_jusgestante.clear()
+            if 'contar_status' in locals():
+                contar_status.clear()
+            st.session_state.atualizar_dados = True
+            if 'df_display_html' in st.session_state:
+                del st.session_state['df_display_html']
+            if 'status_counts' in st.session_state:
+                del st.session_state['status_counts']
+            st.rerun()
     
     # Painel principal para a tabela
     st.markdown('<div class="side-card" style="padding-bottom: 25px;">', unsafe_allow_html=True)
@@ -618,23 +480,27 @@ with col2:
                     pass
             df_display = df_display[mask]
         
+        # Função para formatar status
+        def formatar_status_html(status):
+            status_str = str(status).upper()
+            if status_str in ["DISPONÍVEL", "DISPONIVEL"]:
+                return f'<div class="status-disponivel">DISPONÍVEL</div>'
+            else:
+                return f'<div class="status-indisponivel">INDISPONÍVEL</div>'
+        
         # Aplicar formatação ao status
         df_display['Status_HTML'] = df_display['Status'].apply(formatar_status_html)
         
         # Substituir a coluna Status original pela versão formatada em HTML
-        # Primeiro, vamos identificar todas as colunas exceto a coluna Status original
         colunas_exibir = [col for col in df_display.columns if col != 'Status']
-        
-        # Garantir que Status_HTML está entre as colunas a exibir
         if 'Status_HTML' not in colunas_exibir:
             colunas_exibir.append('Status_HTML')
         
         # Renomear colunas para exibição mais amigável
         rename_cols = {
             'Name': 'NOME',
-            'Status_HTML': 'STATUS',  # Esta será a única coluna de status exibida
+            'Status_HTML': 'STATUS',
             'ID': 'ID',
-            # Adicione outros mapeamentos conforme necessário
         }
         
         # Filtrar apenas os mapeamentos que existem no dataframe
