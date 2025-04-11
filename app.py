@@ -1,333 +1,519 @@
 import streamlit as st
 import pandas as pd
-import datetime
-import uuid
+from datetime import datetime
+from db_connection import testar_conexao, obter_dados, executar_query, selecionar_banco
 
 # Configuração da página
 st.set_page_config(
-    page_title="Gerenciamento do Time Comercial",
-    page_icon="👥",
+    page_title="STATUS JUSGESTANTE",
+    page_icon="👩‍⚕️",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded"
 )
 
-    
-# Estilo CSS personalizado
+# Estilo personalizado para tema escuro e layout similar ao da imagem
 st.markdown("""
 <style>
+    /* Estilo geral e cores */
+    .stApp {
+        background-color: #141E33;
+        color: white;
+    }
+    
     .main-header {
-        font-size: 2.5rem;
+        font-size: 1.8rem;
         font-weight: bold;
-        margin-bottom: 1rem;
-        color: #1E88E5;
-        text-align: center;
+        color: white;
+        padding: 10px 0;
     }
-    .subheader {
+    
+    .section-header {
         font-size: 1.5rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        color: #424242;
-    }
-    .disponivel {
-        background-color: #C8E6C9;
-        padding: 5px 10px;
-        border-radius: 10px;
         font-weight: bold;
-        color: #2E7D32;
+        color: white;
+        padding: 5px 0;
     }
-    .indisponivel {
-        background-color: #FFCDD2;
-        padding: 5px 10px;
+    
+    /* Estilos para painéis laterais e cards */
+    .side-card {
+        background-color: #1B2640;
         border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    /* Estilos para status */
+    .status-disponivel {
+        display: inline-block;
+        background-color: #4CAF50;
+        color: white;
         font-weight: bold;
-        color: #C62828;
+        padding: 5px 15px;
+        border-radius: 20px;
+        text-align: center;
+        min-width: 120px;
     }
-    .info-box {
-        background-color: #E3F2FD;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
+    
+    .status-indisponivel {
+        display: inline-block;
+        background-color: #FF3B3B;
+        color: white;
+        font-weight: bold;
+        padding: 5px 15px;
+        border-radius: 20px;
+        text-align: center;
+        min-width: 120px;
     }
-    .form-box {
-        background-color: #F5F5F5;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        border: 1px solid #E0E0E0;
-    }
-    .stButton>button {
+    
+    /* Tabela de dados */
+    .dataframe {
         width: 100%;
+        background-color: #1B2640;
+        color: white;
+        border-collapse: collapse;
+    }
+    
+    .dataframe th {
+        background-color: #141E33;
+        color: #8B93A7;
+        text-align: left;
+        padding: 12px;
+    }
+    
+    .dataframe td {
+        padding: 10px;
+        border-bottom: 1px solid #2D3958;
+    }
+    
+    /* Botões */
+    .primary-button {
+        background-color: #1B2640;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .action-button {
+        background-color: #6B50A3;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        min-width: 100px;
+        text-align: center;
+        display: inline-block;
+        margin: 2px;
+    }
+    
+    .update-button {
+        background-color: #1B2640;
+        color: white;
+        border: 1px solid #2D3958;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-align: center;
+        font-weight: bold;
+        width: 100%;
+    }
+    
+    .update-button:hover {
+        background-color: #2D3958;
+    }
+    
+    /* Progress bar personalizada */
+    .progress-container {
+        width: 100%;
+        background-color: #2D3958;
+        border-radius: 5px;
+        margin: 5px 0;
+    }
+    
+    .progress-disponivel {
+        background-color: #4CAF50;
+        height: 8px;
+        border-radius: 5px;
+    }
+    
+    .progress-indisponivel {
+        background-color: #9A3B95;
+        height: 8px;
+        border-radius: 5px;
+    }
+    
+    /* Campos de busca */
+    .stTextInput > div > div > input {
+        background-color: #1B2640;
+        color: white;
+        border: 1px solid #2D3958;
+        border-radius: 5px;
+    }
+    
+    /* Estilo para seletores */
+    .stSelectbox > div > div > div {
+        background-color: #1B2640;
+        color: white;
+        border: 1px solid #2D3958;
+    }
+    
+    .stSelectbox > div > div > div > div {
+        background-color: #1B2640;
+        color: white;
+    }
+    
+    /* Barra superior */
+    .topnav {
+        background-color: #141E33;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 20px;
+        border-bottom: 1px solid #2D3958;
+    }
+    
+    .logo {
+        display: flex;
+        align-items: center;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    
+    .logo-circle {
+        width: 30px;
+        height: 30px;
+        background-color: #9A3B95;
+        border-radius: 50%;
+        margin-right: 10px;
+    }
+    
+    .topnav-links {
+        display: flex;
+    }
+    
+    .topnav-link {
+        color: white;
+        margin-left: 20px;
+        text-decoration: none;
+        padding: 5px 10px;
+    }
+    
+    /* Última atualização */
+    .last-update {
+        background-color: #1B2640;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 5px;
+        font-size: 0.9rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Inicializar dados de exemplo se não existirem na sessão
-if 'equipe_comercial' not in st.session_state:
-    st.session_state.equipe_comercial = [
-        {
-            'id': str(uuid.uuid4()),
-            'nome': 'João Silva',
-            'cargo': 'Gerente Comercial',
-            'email': 'joao.silva@empresa.com',
-            'telefone': '(11) 98765-4321',
-            'disponivel': True,
-            'data_cadastro': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'nome': 'Maria Santos',
-            'cargo': 'Vendedora Sênior',
-            'email': 'maria.santos@empresa.com',
-            'telefone': '(11) 91234-5678',
-            'disponivel': False,
-            'data_cadastro': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        },
-        {
-            'id': str(uuid.uuid4()),
-            'nome': 'Pedro Oliveira',
-            'cargo': 'Representante de Vendas',
-            'email': 'pedro.oliveira@empresa.com',
-            'telefone': '(11) 99876-5432',
-            'disponivel': True,
-            'data_cadastro': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-    ]
+# Implementar cache para melhorar o desempenho
+@st.cache_data(ttl=300)  # Cache por 5 minutos
+def carregar_dados_jusgestante():
+    """Carrega dados da tabela FILA_VENDEDORES_JUSGESTANTE com cache"""
+    query = "SELECT * FROM FILA_VENDEDORES_JUSGESTANTE"
+    return obter_dados(query)
 
-# Funções para manipular os dados
-def obter_equipe_comercial():
-    """Obtém todos os membros da equipe comercial."""
-    return st.session_state.equipe_comercial
+# Função para atualizar o status com invalidação de cache
+def atualizar_status(nome, novo_status):
+    """Atualiza o status de um registro na tabela FILA_VENDEDORES_JUSGESTANTE pelo nome"""
+    query = "UPDATE FILA_VENDEDORES_JUSGESTANTE SET Status = %s WHERE Name = %s"
+    sucesso, mensagem = executar_query(query, (novo_status, nome))
+    
+    # Invalidar o cache de dados quando houver atualização
+    if sucesso:
+        carregar_dados_jusgestante.clear()
+    
+    return sucesso, mensagem
 
-def obter_membro_por_id(id_membro):
-    """Obtém um membro específico da equipe pelo ID."""
-    for membro in st.session_state.equipe_comercial:
-        if membro['id'] == id_membro:
-            return membro
-    return None
+# Conectar ao banco de dados com cache
+@st.cache_resource(ttl=3600)  # Cache por 1 hora
+def conectar_banco():
+    sucesso, mensagem = testar_conexao()
+    if sucesso:
+        selecionar_banco("BITRIX24_FILAS_JUSGESTANTE")
+    return sucesso, mensagem
 
-def adicionar_membro(nome, cargo, email, telefone, disponivel=True):
-    """Adiciona um novo membro à equipe comercial."""
-    novo_membro = {
-        'id': str(uuid.uuid4()),
-        'nome': nome,
-        'cargo': cargo,
-        'email': email,
-        'telefone': telefone,
-        'disponivel': disponivel,
-        'data_cadastro': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+# Inicialização do aplicativo - executado apenas uma vez
+if 'inicializado' not in st.session_state:
+    st.session_state.inicializado = True
+    st.session_state.atualizar_dados = True
+
+# Verifica a conexão com o banco
+with st.spinner("Conectando ao banco de dados..."):
+    sucesso, mensagem = conectar_banco()
+    
+    if not sucesso:
+        st.error(f"Falha na conexão com o banco de dados: {mensagem}")
+        st.stop()
+
+# Carrega os dados
+with st.spinner("Carregando dados..."):
+    df = carregar_dados_jusgestante()
+    
+    if df.empty:
+        st.warning("Não foram encontrados registros na tabela FILA_VENDEDORES_JUSGESTANTE ou a tabela não existe.")
+        st.stop()
+
+# Otimizações adicionais para consultas SQL
+@st.cache_data(ttl=60)  # Cache por 1 minuto
+def contar_status():
+    """Obtém contagens de status diretamente via SQL para melhor desempenho"""
+    query_disponiveis = """
+    SELECT COUNT(DISTINCT Name) as count 
+    FROM FILA_VENDEDORES_JUSGESTANTE 
+    WHERE UPPER(Status) IN ('DISPONÍVEL', 'DISPONIVEL')
+    """
+    
+    query_indisponiveis = """
+    SELECT COUNT(DISTINCT Name) as count 
+    FROM FILA_VENDEDORES_JUSGESTANTE 
+    WHERE UPPER(Status) IN ('INDISPONÍVEL', 'INDISPONIVEL')
+    """
+    
+    query_total = """
+    SELECT COUNT(DISTINCT Name) as count 
+    FROM FILA_VENDEDORES_JUSGESTANTE
+    """
+    
+    disponiveis = obter_dados(query_disponiveis).iloc[0]['count'] if not obter_dados(query_disponiveis).empty else 0
+    indisponiveis = obter_dados(query_indisponiveis).iloc[0]['count'] if not obter_dados(query_indisponiveis).empty else 0
+    total = obter_dados(query_total).iloc[0]['count'] if not obter_dados(query_total).empty else 0
+    
+    return total, disponiveis, indisponiveis
+
+# Cálculos de estatísticas otimizados usando consulta SQL direta
+if 'status_counts' not in st.session_state or st.session_state.atualizar_dados:
+    total_agentes, disponiveis, indisponiveis = contar_status()
+    porcentagem_disponiveis = int((disponiveis / total_agentes) * 100) if total_agentes > 0 else 0
+    porcentagem_indisponiveis = int((indisponiveis / total_agentes) * 100) if total_agentes > 0 else 0
+    
+    st.session_state.status_counts = {
+        'total': total_agentes,
+        'disponiveis': disponiveis,
+        'indisponiveis': indisponiveis,
+        'porcentagem_disponiveis': porcentagem_disponiveis,
+        'porcentagem_indisponiveis': porcentagem_indisponiveis
     }
-    st.session_state.equipe_comercial.append(novo_membro)
-    return True
+else:
+    total_agentes = st.session_state.status_counts['total']
+    disponiveis = st.session_state.status_counts['disponiveis']
+    indisponiveis = st.session_state.status_counts['indisponiveis']
+    porcentagem_disponiveis = st.session_state.status_counts['porcentagem_disponiveis']
+    porcentagem_indisponiveis = st.session_state.status_counts['porcentagem_indisponiveis']
 
-def atualizar_membro(id_membro, nome, cargo, email, telefone, disponivel):
-    """Atualiza os dados de um membro existente."""
-    for i, membro in enumerate(st.session_state.equipe_comercial):
-        if membro['id'] == id_membro:
-            st.session_state.equipe_comercial[i] = {
-                'id': id_membro,
-                'nome': nome,
-                'cargo': cargo,
-                'email': email,
-                'telefone': telefone,
-                'disponivel': disponivel,
-                'data_cadastro': membro['data_cadastro']
-            }
-            return True
-    return False
+# Barra superior personalizada
+st.markdown("""
+<div class="topnav">
+    <div class="logo">
+        <div class="logo-circle"></div>
+        STATUS JUSGESTANTE
+    </div>
+    <div class="topnav-links">
+        <div class="topnav-link">Dashboard</div>
+        <div class="topnav-link">Configurações</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-def atualizar_disponibilidade(id_membro, disponivel):
-    """Atualiza apenas o status de disponibilidade de um membro."""
-    for i, membro in enumerate(st.session_state.equipe_comercial):
-        if membro['id'] == id_membro:
-            st.session_state.equipe_comercial[i]['disponivel'] = disponivel
-            return True
-    return False
+# Layout principal com colunas
+col1, col2 = st.columns([1, 3])
 
-def remover_membro(id_membro):
-    """Remove um membro da equipe comercial."""
-    for i, membro in enumerate(st.session_state.equipe_comercial):
-        if membro['id'] == id_membro:
-            st.session_state.equipe_comercial.pop(i)
-            return True
-    return False
+# Coluna 1 (Painel lateral) - Agente, Total, Disponíveis, Indisponíveis
+with col1:
+    # Card Agente
+    st.markdown('<div class="side-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">AGENTE</div>', unsafe_allow_html=True)
+    
+    # Lista de nomes para selecionar
+    names = df['Name'].unique().tolist()
+    selected_name = st.selectbox("", names, label_visibility="collapsed")
 
-def equipe_para_dataframe():
-    """Converte a lista de membros da equipe em um DataFrame do pandas."""
-    equipe = obter_equipe_comercial()
-    if not equipe:
-        return pd.DataFrame(columns=["id", "nome", "cargo", "email", "telefone", "disponivel", "data_cadastro"])
-    
-    df = pd.DataFrame(equipe)
-    return df
-
-# Função para exibir o cabeçalho
-def exibir_cabecalho():
-    st.markdown('<div class="main-header">Gerenciamento do Time Comercial</div>', unsafe_allow_html=True)
-    st.markdown('---')
-
-# Função para formatar a disponibilidade como badge colorido
-def formatar_disponibilidade(disponivel):
-    if disponivel:
-        return '<span class="disponivel">Disponível</span>'
-    return '<span class="indisponivel">Indisponível</span>'
-
-# Função para exibir a lista de membros da equipe
-def exibir_lista_equipe():
-    st.markdown('<div class="subheader">Membros da Equipe</div>', unsafe_allow_html=True)
-    
-    # Obtém a lista de membros
-    df = equipe_para_dataframe()
-    
-    if len(df) == 0:
-        st.info("Nenhum membro cadastrado. Adicione o primeiro membro usando o formulário.")
-        return
-    
-    # Prepara o dataframe para exibição
-    if 'disponivel' in df.columns:
-        df['status'] = df['disponivel'].apply(lambda x: formatar_disponibilidade(x))
-    else:
-        df['status'] = ''
-    
-    # Seleciona colunas para exibição
-    colunas_exibicao = ['nome', 'cargo', 'email', 'telefone', 'status']
-    df_exibicao = df[colunas_exibicao].copy() if all(col in df.columns for col in colunas_exibicao) else df
-    
-    # Renomeia colunas para exibição
-    df_exibicao.columns = ['Nome', 'Cargo', 'Email', 'Telefone', 'Disponibilidade']
-    
-    # Exibe a tabela com formatação HTML para o status
-    st.write(df_exibicao.to_html(escape=False, index=False), unsafe_allow_html=True)
-    
-    # Área para ações (editar/excluir/alterar disponibilidade)
-    st.markdown('<div class="subheader">Ações</div>', unsafe_allow_html=True)
-    
-    # Cria duas colunas: uma para seleção do membro e outra para ações
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        if 'id' in df.columns and 'nome' in df.columns:
-            opcoes_membros = {f"{row['nome']} ({row['cargo']})": row['id'] for _, row in df.iterrows()}
-            membro_selecionado = st.selectbox("Selecione um membro", list(opcoes_membros.keys()))
-            id_membro = opcoes_membros[membro_selecionado] if membro_selecionado else None
-        else:
-            st.error("Estrutura de dados inesperada. Verifique os dados.")
-            id_membro = None
-    
-    with col2:
-        if id_membro:
-            acao = st.radio("Ação", ["Alterar Disponibilidade", "Editar", "Excluir"])
+    # Se um agente foi selecionado, mostra opções de status e botão atualizar
+    if selected_name:
+        # Obter o status atual do agente selecionado
+        status_atual = df[df['Name'] == selected_name]['Status'].iloc[0].upper() if not df[df['Name'] == selected_name].empty else "INDISPONÍVEL"
+        
+        # STATUS
+        st.markdown('<div class="section-header" style="margin-top: 15px;">STATUS</div>', unsafe_allow_html=True)
+        
+        # Define o status inicial baseado no status atual
+        if 'status_selecionado' not in st.session_state:
+            st.session_state.status_selecionado = status_atual
             
-            if st.button("Executar Ação"):
-                if acao == "Alterar Disponibilidade":
-                    # Busca o membro e seu status atual
-                    membro = obter_membro_por_id(id_membro)
-                    if membro and 'disponivel' in membro:
-                        novo_status = not membro['disponivel']
-                        if atualizar_disponibilidade(id_membro, novo_status):
-                            status_texto = "disponível" if novo_status else "indisponível"
-                            st.success(f"Status alterado para {status_texto} com sucesso!")
-                            st.experimental_rerun()
-                        else:
-                            st.error("Erro ao alterar disponibilidade.")
-                
-                elif acao == "Editar":
-                    # Armazena o ID do membro para edição
-                    st.session_state['membro_para_editar'] = id_membro
-                    st.experimental_rerun()
-                
-                elif acao == "Excluir":
-                    if remover_membro(id_membro):
-                        st.success("Membro excluído com sucesso!")
-                        st.experimental_rerun()
-                    else:
-                        st.error("Erro ao excluir membro.")
-
-# Função para exibir o formulário de cadastro/edição
-def exibir_formulario():
-    # Verifica se está no modo de edição
-    modo_edicao = 'membro_para_editar' in st.session_state
-    
-    if modo_edicao:
-        id_membro = st.session_state['membro_para_editar']
-        membro = obter_membro_por_id(id_membro)
-        st.markdown(f'<div class="subheader">Editar Membro</div>', unsafe_allow_html=True)
-    else:
-        membro = None
-        st.markdown('<div class="subheader">Adicionar Novo Membro</div>', unsafe_allow_html=True)
-    
-    with st.form("formulario_membro", clear_on_submit=not modo_edicao):
-        st.markdown('<div class="form-box">', unsafe_allow_html=True)
-        
-        # Campos do formulário
-        nome = st.text_input("Nome Completo*", value=membro['nome'] if membro and 'nome' in membro else "")
-        cargo = st.text_input("Cargo*", value=membro['cargo'] if membro and 'cargo' in membro else "")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            email = st.text_input("Email*", value=membro['email'] if membro and 'email' in membro else "")
-        with col2:
-            telefone = st.text_input("Telefone*", value=membro['telefone'] if membro and 'telefone' in membro else "")
-        
-        disponivel = st.checkbox("Disponível para atendimento", 
-                                value=membro['disponivel'] if membro and 'disponivel' in membro else True)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            cancelar = st.form_submit_button("Cancelar")
-        with col2:
-            if modo_edicao:
-                confirmar = st.form_submit_button("Salvar Alterações")
-            else:
-                confirmar = st.form_submit_button("Adicionar Membro")
-        
-        if cancelar:
-            if 'membro_para_editar' in st.session_state:
-                del st.session_state['membro_para_editar']
-            st.experimental_rerun()
-        
-        if confirmar:
-            # Validação básica
-            if not nome or not cargo or not email or not telefone:
-                st.error("Todos os campos marcados com * são obrigatórios.")
-                return
+        # Quando o usuário seleciona um novo agente, atualiza o status
+        if 'nome_anterior' not in st.session_state:
+            st.session_state.nome_anterior = selected_name
+        elif st.session_state.nome_anterior != selected_name:
+            st.session_state.status_selecionado = status_atual
+            st.session_state.nome_anterior = selected_name
             
-            # Processamento com base no modo
-            if modo_edicao:
-                if atualizar_membro(id_membro, nome, cargo, email, telefone, disponivel):
-                    st.success("Membro atualizado com sucesso!")
-                    del st.session_state['membro_para_editar']
-                    st.experimental_rerun()
+        # Função para selecionar status via callback
+        def selecionar_status(status):
+            st.session_state.status_selecionado = status
+        
+        # Botões de status
+        status_col1, status_col2 = st.columns(2)
+        
+        with status_col1:
+            disp_btn = st.button("DISPONÍVEL", key="disponivel", 
+                               on_click=selecionar_status, 
+                               args=("DISPONÍVEL",))
+            
+        with status_col2:
+            indisp_btn = st.button("INDISPONÍVEL", key="indisponivel", 
+                                 on_click=selecionar_status, 
+                                 args=("INDISPONÍVEL",))
+        
+        # Status selecionado com badge
+        status_color = "#4CAF50" if st.session_state.status_selecionado == "DISPONÍVEL" else "#FF3B3B"
+        st.markdown(f"""
+        <div style="margin: 10px 0; display: flex; align-items: center;">
+            <span>Status selecionado: </span>
+            <span style="background-color: {status_color}; color: white; border-radius: 15px; padding: 2px 10px; margin-left: 5px; font-weight: bold;">{st.session_state.status_selecionado}</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Botão Atualizar
+        if st.button("Atualizar", key="atualizar_btn", use_container_width=True):
+            with st.spinner(f"Atualizando status de {selected_name} para {st.session_state.status_selecionado}..."):
+                sucesso, mensagem = atualizar_status(selected_name, st.session_state.status_selecionado)
+                if sucesso:
+                    st.success(f"Status de {selected_name} atualizado para {st.session_state.status_selecionado} com sucesso!")
+                    st.session_state.atualizar_dados = True
+                    st.rerun()
                 else:
-                    st.error("Erro ao atualizar membro.")
+                    st.error(f"Erro ao atualizar status: {mensagem}")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Card Total de Agentes
+    st.markdown('<div class="side-card">', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-header">Total de Agentes</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size: 2.5rem; font-weight: bold; text-align: left;">{total_agentes}</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Card Disponíveis
+    st.markdown('<div class="side-card">', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-header">Disponíveis</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size: 2.5rem; font-weight: bold; text-align: left;">{disponiveis}</div>', unsafe_allow_html=True)
+    
+    # Barra de progresso para disponíveis
+    st.markdown(f"""
+    <div class="progress-container">
+        <div class="progress-disponivel" style="width: {porcentagem_disponiveis}%;"></div>
+    </div>
+    <div style="text-align: right;">{porcentagem_disponiveis}%</div>
+    """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Card Indisponíveis
+    st.markdown('<div class="side-card">', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-header">Indisponíveis</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size: 2.5rem; font-weight: bold; text-align: left;">{indisponiveis}</div>', unsafe_allow_html=True)
+    
+    # Barra de progresso para indisponíveis
+    st.markdown(f"""
+    <div class="progress-container">
+        <div class="progress-indisponivel" style="width: {porcentagem_indisponiveis}%;"></div>
+    </div>
+    <div style="text-align: right;">{porcentagem_indisponiveis}%</div>
+    """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Coluna 2 (Conteúdo principal) - Tabela e detalhes
+with col2:
+    # Cabeçalho e última atualização
+    col_header1, col_header2 = st.columns([3, 1])
+    
+    with col_header1:
+        st.markdown('<div class="main-header">Controle de Fila</div>', unsafe_allow_html=True)
+    
+    with col_header2:
+        # Formatação da data atual no estilo DD/MM/YYYY HH:MM:SS
+        data_atual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        st.markdown(f'<div class="last-update">Última atualização: {data_atual}</div>', unsafe_allow_html=True)
+        
+        # Botão de atualização do dashboard
+        if st.button("🔄 Atualizar Dashboard"):
+            carregar_dados_jusgestante.clear()
+            if 'contar_status' in locals():
+                contar_status.clear()
+            st.session_state.atualizar_dados = True
+            if 'df_display_html' in st.session_state:
+                del st.session_state['df_display_html']
+            if 'status_counts' in st.session_state:
+                del st.session_state['status_counts']
+            st.rerun()
+    
+    # Painel principal para a tabela
+    st.markdown('<div class="side-card" style="padding-bottom: 25px;">', unsafe_allow_html=True)
+    
+    # Campo de busca para a tabela
+    busca = st.text_input("Buscar agente...", key="busca_agente")
+    
+    # Otimização: armazenar em cache a busca anterior
+    if 'busca_anterior' not in st.session_state:
+        st.session_state.busca_anterior = ""
+    
+    # Otimização: só processa a tabela se os dados ou a busca mudarem
+    if 'df_display_html' not in st.session_state or st.session_state.busca_anterior != busca or st.session_state.atualizar_dados:
+        # Preparar os dados da tabela
+        df_display = df.copy()
+        
+        # Aplicar filtro de busca se houver
+        if busca:
+            filtro = busca.lower()
+            mask = False
+            # Aplicar o filtro em todas as colunas que contêm texto
+            for col in df_display.columns:
+                try:
+                    mask = mask | df_display[col].astype(str).str.lower().str.contains(filtro)
+                except:
+                    pass
+            df_display = df_display[mask]
+        
+        # Função para formatar status
+        def formatar_status_html(status):
+            status_str = str(status).upper()
+            if status_str in ["DISPONÍVEL", "DISPONIVEL"]:
+                return f'<div class="status-disponivel">DISPONÍVEL</div>'
             else:
-                if adicionar_membro(nome, cargo, email, telefone, disponivel):
-                    st.success("Membro adicionado com sucesso!")
-                    st.experimental_rerun()
-                else:
-                    st.error("Erro ao adicionar membro.")
-
-# Função principal
-def main():
-    exibir_cabecalho()
-    
-    # Barra lateral com informações
-    with st.sidebar:
-        st.image("https://img.icons8.com/color/96/000000/commercial-development-management.png", width=100)
+                return f'<div class="status-indisponivel">INDISPONÍVEL</div>'
         
-        st.markdown("## Navegação")
-        opcao = st.radio("Escolha uma opção:", ["Visualizar Equipe", "Adicionar Membro"])
+        # Aplicar formatação ao status
+        df_display['Status_HTML'] = df_display['Status'].apply(formatar_status_html)
         
-        st.markdown("---")
-        st.markdown("### Versão de Demonstração")
-        st.markdown("Esta é uma versão de demonstração sem banco de dados. Os dados são armazenados temporariamente na sessão e serão perdidos ao reiniciar o aplicativo.")
+        # Substituir a coluna Status original pela versão formatada em HTML
+        colunas_exibir = [col for col in df_display.columns if col != 'Status']
+        if 'Status_HTML' not in colunas_exibir:
+            colunas_exibir.append('Status_HTML')
+        
+        # Renomear colunas para exibição mais amigável
+        rename_cols = {
+            'Name': 'NOME',
+            'Status_HTML': 'STATUS',
+            'ID': 'ID',
+        }
+        
+        # Filtrar apenas os mapeamentos que existem no dataframe
+        rename_cols_filtered = {k: v for k, v in rename_cols.items() if k in colunas_exibir}
+        
+        # Renomear colunas para exibição
+        df_temp = df_display[colunas_exibir].rename(columns=rename_cols_filtered)
+        
+        # Exibir a tabela com formatação HTML
+        st.session_state.df_display_html = df_temp.to_html(escape=False, index=False)
+        st.session_state.busca_anterior = busca
     
-    # Conteúdo principal com base na opção selecionada
-    if opcao == "Visualizar Equipe" and 'membro_para_editar' not in st.session_state:
-        exibir_lista_equipe()
-    else:
-        exibir_formulario()
-
-if __name__ == "__main__":
-    main() 
+    # Usar a tabela HTML em cache
+    st.markdown(st.session_state.df_display_html, unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True) 
