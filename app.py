@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import pytz
 from db_connection import testar_conexao, obter_dados, executar_query, selecionar_banco
 
 # Configuração da página
@@ -437,8 +438,9 @@ with col2:
         st.markdown('<div class="main-header">Controle de Fila</div>', unsafe_allow_html=True)
     
     with col_header2:
-        # Formatação da data atual no estilo DD/MM/YYYY HH:MM:SS
-        data_atual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        # Formatação da data atual no estilo DD/MM/YYYY HH:MM:SS com fuso horário de Brasília
+        fuso_horario = pytz.timezone('America/Sao_Paulo')
+        data_atual = datetime.now(fuso_horario).strftime("%d/%m/%Y %H:%M:%S")
         st.markdown(f'<div class="last-update">Última atualização: {data_atual}</div>', unsafe_allow_html=True)
         
         # Botão de atualização do dashboard
